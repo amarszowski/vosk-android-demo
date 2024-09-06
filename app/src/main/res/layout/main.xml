@@ -1,34 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-    <Button
-        android:id="@+id/recognize_file"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="8dp">
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/recognize_file"/>
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@color/white">
 
-    <Button
-        android:id="@+id/recognize_mic"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/recognize_microphone"/>
+        <!-- Spinner for selecting models with label -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_model"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/primaryTextColor" />
 
-    <ToggleButton
-        android:id="@+id/pause"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textOff="@string/pause"
-        android:textOn="@string/continueRecognition"/>
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
 
-    <TextView
-        android:id="@+id/result_text"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="bottom"
-        android:scrollbars="vertical"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+            <Spinner
+                android:id="@+id/model_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"
+                android:backgroundTint="@color/primaryLightColor" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-</LinearLayout>
+        <!-- Button to recognize speech from microphone -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/recognize_mic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/listen_microphone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:icon="@drawable/baseline_mic_24"
+            android:layout_marginBottom="16dp"
+            android:textColor="@color/primaryColor"/>
+
+        <!-- ToggleButton to pause/resume recognition -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/pause"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textOff="@string/pause"
+                android:textOn="@string/continueRecognition"
+                android:text="@string/pause"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:icon="@drawable/baseline_pause_24"
+                android:textColor="@color/primaryColor" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- TextView to display recognition results -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            android:backgroundTint="@color/cardBackgroundColor">
+
+            <TextView
+                android:id="@+id/result_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:scrollbars="vertical"
+                android:gravity="bottom"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/primaryTextColor"/>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -1,17 +1,3 @@
-// Copyright 2019 Alpha Cephei Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package org.vosk.demo;
 
 import android.Manifest;
@@ -19,9 +5,14 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.ToggleButton;
+
+import com.google.android.material.button.MaterialButton;
 
 import org.vosk.LibVosk;
 import org.vosk.LogLevel;
@@ -29,31 +20,33 @@ import org.vosk.Model;
 import org.vosk.Recognizer;
 import org.vosk.android.RecognitionListener;
 import org.vosk.android.SpeechService;
-import org.vosk.android.SpeechStreamService;
 import org.vosk.android.StorageService;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-public class VoskActivity extends Activity implements
-        RecognitionListener {
+public class VoskActivity extends Activity implements RecognitionListener {
 
     static private final int STATE_START = 0;
     static private final int STATE_READY = 1;
     static private final int STATE_DONE = 2;
-    static private final int STATE_FILE = 3;
-    static private final int STATE_MIC = 4;
+    static private final int STATE_MIC = 3;
 
     /* Used to handle permission request */
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
 
-    private Model model;
+    private Map<String, Model> loadedModels = new HashMap<>();
+    private List<String> availableModelNames = new ArrayList<>();
+    private String selectedModelName = "en-us"; // Default model selection
+
     private SpeechService speechService;
-    private SpeechStreamService speechStreamService;
     private TextView resultView;
 
     @Override
@@ -65,30 +58,76 @@ public class VoskActivity extends Activity implements
         resultView = findViewById(R.id.result_text);
         setUiState(STATE_START);
 
-        findViewById(R.id.recognize_file).setOnClickListener(view -> recognizeFile());
         findViewById(R.id.recognize_mic).setOnClickListener(view -> recognizeMicrophone());
-        ((ToggleButton) findViewById(R.id.pause)).setOnCheckedChangeListener((view, isChecked) -> pause(isChecked));
+        ((MaterialButton) findViewById(R.id.pause)).setOnClickListener(view -> {
+            MaterialButton pauseButton = (MaterialButton) view;
+            pause(pauseButton.isChecked());
+        });
 
         LibVosk.setLogLevel(LogLevel.INFO);
 
-        // Check if user has given permission to record audio, init the model after permission is granted
+        // Check if user has given permission to record audio, init the models after permission is granted
         int permissionCheck = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.RECORD_AUDIO);
         if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, PERMISSIONS_REQUEST_RECORD_AUDIO);
         } else {
-            initModel();
+            initModels();
         }
     }
 
-    private void initModel() {
-        StorageService.unpack(this, "model-en-us", "model",
-                (model) -> {
-                    this.model = model;
-                    setUiState(STATE_READY);
-                },
-                (exception) -> setErrorState("Failed to unpack the model" + exception.getMessage()));
+    private void initModels() {
+        try {
+            String[] modelDirs = getAssets().list(""); // List all assets
+            if (modelDirs != null) {
+                for (String dir : modelDirs) {
+                    if (dir.startsWith("model-")) {
+                        String modelName = dir.replace("model-", ""); // Extract language name from directory
+                        loadModel(dir, modelName);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            setErrorState("Error loading models: " + e.getMessage());
+        }
     }
 
+    private void loadModel(String assetDir, String modelName) {
+        StorageService.unpack(this, assetDir, modelName,
+                (model) -> {
+                    loadedModels.put(modelName, model);
+                    availableModelNames.add(modelName);
+                    checkIfModelsReady();
+                },
+                (exception) -> setErrorState("Failed to unpack the model " + modelName + ": " + exception.getMessage()));
+    }
+
+    private void checkIfModelsReady() {
+        if (!loadedModels.isEmpty()) {
+            setUiState(STATE_READY);
+            populateModelComboBox();
+        }
+    }
+
+    private void populateModelComboBox() {
+        Spinner modelSpinner = findViewById(R.id.model_spinner);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, availableModelNames);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        modelSpinner.setAdapter(adapter);
+
+        modelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                selectedModelName = availableModelNames.get(position); // Save selected model name
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+                // Default to first model if none is selected
+                selectedModelName = availableModelNames.get(0);
+            }
+        });
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -99,7 +138,7 @@ public class VoskActivity extends Activity implements
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Recognizer initialization is a time-consuming and it involves IO,
                 // so we execute it in async task
-                initModel();
+                initModels();
             } else {
                 finish();
             }
@@ -114,10 +153,6 @@ public class VoskActivity extends Activity implements
             speechService.stop();
             speechService.shutdown();
         }
-
-        if (speechStreamService != null) {
-            speechStreamService.stop();
-        }
     }
 
     @Override
@@ -129,9 +164,6 @@ public class VoskActivity extends Activity implements
     public void onFinalResult(String hypothesis) {
         resultView.append(hypothesis + "\n");
         setUiState(STATE_DONE);
-        if (speechStreamService != null) {
-            speechStreamService = null;
-        }
     }
 
     @Override
@@ -150,41 +182,33 @@ public class VoskActivity extends Activity implements
     }
 
     private void setUiState(int state) {
+        Spinner modelSpinner = findViewById(R.id.model_spinner);
+
         switch (state) {
             case STATE_START:
                 resultView.setText(R.string.preparing);
                 resultView.setMovementMethod(new ScrollingMovementMethod());
-                findViewById(R.id.recognize_file).setEnabled(false);
                 findViewById(R.id.recognize_mic).setEnabled(false);
+                modelSpinner.setEnabled(false);
                 findViewById(R.id.pause).setEnabled((false));
                 break;
             case STATE_READY:
                 resultView.setText(R.string.ready);
-                ((Button) findViewById(R.id.recognize_mic)).setText(R.string.recognize_microphone);
-                findViewById(R.id.recognize_file).setEnabled(true);
                 findViewById(R.id.recognize_mic).setEnabled(true);
+                modelSpinner.setEnabled(true);
                 findViewById(R.id.pause).setEnabled((false));
                 break;
             case STATE_DONE:
-                ((Button) findViewById(R.id.recognize_file)).setText(R.string.recognize_file);
-                ((Button) findViewById(R.id.recognize_mic)).setText(R.string.recognize_microphone);
-                findViewById(R.id.recognize_file).setEnabled(true);
+                ((Button) findViewById(R.id.recognize_mic)).setText(R.string.listen_microphone);
                 findViewById(R.id.recognize_mic).setEnabled(true);
-                findViewById(R.id.pause).setEnabled((false));
-                ((ToggleButton) findViewById(R.id.pause)).setChecked(false);
-                break;
-            case STATE_FILE:
-                ((Button) findViewById(R.id.recognize_file)).setText(R.string.stop_file);
-                resultView.setText(getString(R.string.starting));
-                findViewById(R.id.recognize_mic).setEnabled(false);
-                findViewById(R.id.recognize_file).setEnabled(true);
+                modelSpinner.setEnabled(true);
                 findViewById(R.id.pause).setEnabled((false));
                 break;
             case STATE_MIC:
                 ((Button) findViewById(R.id.recognize_mic)).setText(R.string.stop_microphone);
                 resultView.setText(getString(R.string.say_something));
-                findViewById(R.id.recognize_file).setEnabled(false);
                 findViewById(R.id.recognize_mic).setEnabled(true);
+                modelSpinner.setEnabled(false);
                 findViewById(R.id.pause).setEnabled((true));
                 break;
             default:
@@ -194,32 +218,9 @@ public class VoskActivity extends Activity implements
 
     private void setErrorState(String message) {
         resultView.setText(message);
-        ((Button) findViewById(R.id.recognize_mic)).setText(R.string.recognize_microphone);
-        findViewById(R.id.recognize_file).setEnabled(false);
+        ((Button) findViewById(R.id.recognize_mic)).setText(R.string.listen_microphone);
         findViewById(R.id.recognize_mic).setEnabled(false);
-    }
-
-    private void recognizeFile() {
-        if (speechStreamService != null) {
-            setUiState(STATE_DONE);
-            speechStreamService.stop();
-            speechStreamService = null;
-        } else {
-            setUiState(STATE_FILE);
-            try {
-                Recognizer rec = new Recognizer(model, 16000.f, "[\"one zero zero zero one\", " +
-                        "\"oh zero one two three four five six seven eight nine\", \"[unk]\"]");
-
-                InputStream ais = getAssets().open(
-                        "10001-90210-01803.wav");
-                if (ais.skip(44) != 44) throw new IOException("File too short");
-
-                speechStreamService = new SpeechStreamService(rec, ais, 16000);
-                speechStreamService.start(this);
-            } catch (IOException e) {
-                setErrorState(e.getMessage());
-            }
-        }
+        findViewById(R.id.model_spinner).setEnabled(false);
     }
 
     private void recognizeMicrophone() {
@@ -230,7 +231,7 @@ public class VoskActivity extends Activity implements
         } else {
             setUiState(STATE_MIC);
             try {
-                Recognizer rec = new Recognizer(model, 16000.0f);
+                Recognizer rec = new Recognizer(loadedModels.get(selectedModelName), 16000.0f);
                 speechService = new SpeechService(rec, 16000.0f);
                 speechService.startListening(this);
             } catch (IOException e) {
@@ -239,11 +240,9 @@ public class VoskActivity extends Activity implements
         }
     }
 
-
     private void pause(boolean checked) {
         if (speechService != null) {
             speechService.setPause(checked);
         }
     }
-
 }

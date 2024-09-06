@@ -1,0 +1,16 @@
+<resources>
+    <color name="primaryColor">#6200EE</color>
+    <color name="primaryDarkColor">#3700B3</color>
+    <color name="primaryLightColor">#BB86FC</color>
+    <color name="primaryTextColor">#000000</color> <!-- Black for text -->
+    <color name="cardBackgroundColor">#FFFFFF</color> <!-- White for card background -->
+    <color name="white">#FFFFFF</color> <!-- White color -->
+
+    <!-- Additional colors -->
+    <color name="accentColor">#03DAC5</color> <!-- Teal for accent -->
+    <color name="secondaryTextColor">#757575</color> <!-- Gray for secondary text -->
+    <color name="errorColor">#B00020</color> <!-- Red for error messages -->
+    <color name="backgroundColor">#F5F5F5</color> <!-- Light gray for background -->
+    <color name="buttonColor">#E91E63</color> <!-- Light blue for buttons -->
+    <color name="disabledColor">#BDBDBD</color> <!-- Gray for disabled components -->
+</resources>
