@@ -8,3 +8,11 @@
 *.md5
 *.lst
 *.iml
+/models/src/main/assets/model-english/
+/models/src/main/assets/model-hindi/
+/models/src/main/assets/model-kazakh/
+/models/src/main/assets/model-polish/
+/models/src/main/assets/model-russian/
+/models/src/main/assets/model-turkish/
+/models/src/main/assets/model-ukrainian/
+/models/src/main/assets/model-uzbek/

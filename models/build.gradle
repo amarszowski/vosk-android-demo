@@ -17,14 +17,21 @@ android {
     }
 }
 
-tasks.register('genUUID') {
-    def uuid = UUID.randomUUID().toString()
-    def odir = file("$buildDir/generated/assets/")
-    def ofile = file("$odir/uuid")
+tasks.register('genUUIDs') {
+    def modelsDir = file("src/main/assets")
+
     doLast {
-        mkdir odir
-        ofile.text = uuid
+        modelsDir.eachDir { modelDir ->
+            def modelName = modelDir.name
+            def uuid = UUID.randomUUID().toString()
+            def odir = file("$buildDir/generated/assets/$modelName")
+            def ofile = file("$odir/uuid")
+
+            mkdir odir
+            ofile.text = uuid
+            println "Generated UUID for model $modelName: $uuid"
+        }
     }
 }
 
-preBuild.dependsOn(genUUID)
+preBuild.dependsOn(genUUIDs)
